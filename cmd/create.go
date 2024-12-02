@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"github.com/spf13/cobra"
-	"github/tss182/cli-boilerplate/cmd/lib"
+	"github.com/tss182/cli-boilerplate/cmd/lib"
 	"os"
 	"path/filepath"
 	"strings"

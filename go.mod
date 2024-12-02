@@ -1,4 +1,4 @@
-module github/tss182/cli-boilerplate
+module github.com/tss182/cli-boilerplate
 
 go 1.23
 
