@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/tss182/cli-boilerplate/cmd/lib"
@@ -35,7 +36,6 @@ You can specify the folder name, file name, and the content to write to the file
 
 		goModName := lib.GetModuleName()
 
-		fmt.Println("module name", goModName)
 		//check folder domain
 		for _, v := range folderRequired {
 			if !lib.PathExists(v) {
@@ -64,8 +64,162 @@ You can specify the folder name, file name, and the content to write to the file
 		templateValue.Domain = lib.PackageName(domain, true, " ")
 		templateValue.Folder = strings.Replace(domainFolder, "\\", "/", -1)
 
+		//container.go
+		targetFileContainer := "./delivery/container/container.go"
+		file, err := os.OpenFile(targetFileContainer, os.O_RDWR, 0755)
+		if err != nil {
+			fmt.Printf("failed to open file: %v", err)
+			return
+		}
+		defer func(file *os.File) {
+			_ = file.Close()
+		}(file)
+
+		var content []string
+		scanner := bufio.NewScanner(file)
+
+		//import config
+		inImport := false
+		newImportFeat := fmt.Sprintf("\t%sFeature \"%s/%s/feature\"", templateValue.DomainPackageLocal, templateValue.GoModName, templateValue.Folder)
+		newImportRepo := fmt.Sprintf("\t%sRepository \"%s/%s/repository\"", templateValue.DomainPackageLocal, templateValue.GoModName, templateValue.Folder)
+
+		//struct config
+		inStruct := false
+		newStruct := fmt.Sprintf("\t%sFeature %sFeature.%sFeatureInterface", templateValue.DomainPackage, templateValue.DomainPackageLocal, templateValue.DomainPackage)
+
+		//container return config
+		inContainerRetrun := false
+		newVariableRepo := fmt.Sprintf("\t%sRepo := %sRepository.New(dbMySQL,&cfg)", templateValue.DomainPackageLocal, templateValue.DomainPackageLocal)
+		newVariableFeat := fmt.Sprintf("\t%sFeat := %sFeature.New(%sRepo)", templateValue.DomainPackageLocal, templateValue.DomainPackageLocal, templateValue.DomainPackageLocal)
+		newValueStruct := fmt.Sprintf("\t\t%sFeature: %sFeat,", templateValue.DomainPackage, templateValue.DomainPackageLocal)
+		//ApprovalCorrectionFeature: approvalCorrectionFeat,
+		for scanner.Scan() {
+			line := scanner.Text()
+			lineNoSpace := strings.TrimSpace(strings.Replace(line, " ", "", -1))
+			if strings.HasPrefix(lineNoSpace, "import(") {
+				inImport = true
+			}
+
+			if inImport && strings.HasPrefix(lineNoSpace, ")") {
+				inImport = false
+				content = append(content, newImportFeat)
+				content = append(content, newImportRepo)
+			}
+
+			if strings.HasPrefix(lineNoSpace, "typeContainerstruct{") {
+				inStruct = true
+			}
+
+			if inStruct && strings.HasPrefix(lineNoSpace, "}") {
+				inStruct = false
+				content = append(content, newStruct)
+			}
+
+			if strings.HasPrefix(lineNoSpace, "returnContainer{") {
+				content = append(content, newVariableRepo)
+				content = append(content, newVariableFeat)
+				content = append(content, "\n\n")
+				inContainerRetrun = true
+			}
+
+			if inContainerRetrun && strings.HasPrefix(lineNoSpace, "}") {
+				inContainerRetrun = false
+				content = append(content, newValueStruct)
+
+			}
+
+			content = append(content, line)
+		}
+
+		if err := scanner.Err(); err != nil {
+			fmt.Printf("failed to read file: %v", err)
+			return
+		}
+
+		// Write the modified content back to the file
+		_ = file.Truncate(0)   // Clear the file
+		_, _ = file.Seek(0, 0) // Move pointer to the start
+		writer := bufio.NewWriter(file)
+		for _, line := range content {
+			_, _ = writer.WriteString(line + "\n")
+		}
+		_ = writer.Flush()
+
+		//handler.go
+		targetFileHandler := "./delivery/server/handler.go"
+		fileHandler, err := os.OpenFile(targetFileHandler, os.O_RDWR, 0755)
+		if err != nil {
+			fmt.Printf("failed to open file: %v", err)
+			return
+		}
+		defer func(fileHandler *os.File) {
+			_ = fileHandler.Close()
+		}(fileHandler)
+
+		content = []string{}
+		scanner = bufio.NewScanner(fileHandler)
+
+		//import config
+		inImport = false
+		newImport := fmt.Sprintf("\"%s/%s\"", templateValue.GoModName, templateValue.Folder)
+
+		//struct config
+		inStruct = false
+		newStruct = fmt.Sprintf("\t%s %s.%sHandlerInterface", templateValue.DomainPackage, templateValue.DomainPackageLocal, templateValue.DomainPackage)
+
+		//value struct config
+		inValueStruct := false
+		newVariableStruct := fmt.Sprintf("\t\t%s : \t%s.New(cont.%s)", templateValue.DomainPackage, templateValue.DomainPackageLocal, templateValue.DomainPackage)
+
+		for scanner.Scan() {
+			line := scanner.Text()
+			lineNoSpace := strings.TrimSpace(strings.Replace(line, " ", "", -1))
+			if strings.HasPrefix(lineNoSpace, "import(") {
+				inImport = true
+			}
+
+			if inImport && strings.HasPrefix(lineNoSpace, ")") {
+				inImport = false
+				content = append(content, newImport)
+			}
+
+			if strings.HasPrefix(lineNoSpace, "typeHandlerstruct{") {
+				inStruct = true
+			}
+
+			if inStruct && strings.HasPrefix(lineNoSpace, "}") {
+				inStruct = false
+				content = append(content, newStruct)
+			}
+
+			if strings.HasPrefix(lineNoSpace, "returnHandler{") {
+				inValueStruct = true
+			}
+
+			if inValueStruct && strings.HasPrefix(lineNoSpace, "}") {
+				inValueStruct = false
+				content = append(content, newVariableStruct)
+			}
+
+			content = append(content, line)
+		}
+
+		if err := scanner.Err(); err != nil {
+			fmt.Printf("failed to read file: %v", err)
+			return
+		}
+
+		// Write the modified content back to the file
+		_ = fileHandler.Truncate(0)   // Clear the file
+		_, _ = fileHandler.Seek(0, 0) // Move pointer to the start
+		writer = bufio.NewWriter(fileHandler)
+		for _, line := range content {
+			_, _ = writer.WriteString(line + "\n")
+		}
+		_ = writer.Flush()
+
 		// Create the folder
-		err := os.MkdirAll(domainFolder, os.ModePerm)
+		err = os.MkdirAll(domainFolder, os.ModePerm)
 		if err != nil {
 			fmt.Printf("Error creating folder: %v\n", err)
 			return

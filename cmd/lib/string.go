@@ -65,10 +65,15 @@ func PackageName(s string, upperFirstWord bool, separator string) string {
 	arr := strings.Split(s, " ")
 	var arrNew []string
 	for i, v := range arr {
+		var temp string
 		if i == 0 && !upperFirstWord {
+			temp = strings.ToLower(strings.TrimSpace(v))
+		} else {
+			temp = t.String(strings.ToLower(strings.TrimSpace(v)))
+		}
+		if temp == "" {
 			continue
 		}
-		temp := t.String(strings.ToLower(strings.TrimSpace(v)))
 		arrNew = append(arrNew, temp)
 	}
 	return strings.Join(arrNew, separator)

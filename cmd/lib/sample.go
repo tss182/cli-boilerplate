@@ -318,7 +318,7 @@ func (r *{{.DomainPackageLocal}}Feature) Delete(ctx context.Context, code *strin
 `
 
 var SampleHandler = `
-package {{.DomainPackage}}
+package {{.DomainPackageLocal}}
 
 import (
 	"{{.GoModName}}/{{.Folder}}/entity"
