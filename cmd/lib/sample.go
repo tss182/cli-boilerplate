@@ -321,16 +321,15 @@ var SampleHandler = `
 package {{.DomainPackage}}
 
 import (
-	"enterprise/crf/{{.Folder}}/entity"
-	"enterprise/crf/shared"
-	"enterprise/crf/shared/constant"
-	"enterprise/crf/shared/message"
-	"enterprise/crf/shared/pagination"
-	"enterprise/crf/shared/response"
-	"enterprise/crf/shared/validate"
+	"{{.GoModName}}/{{.Folder}}/entity"
+	"{{.GoModName}}/shared"
+	"{{.GoModName}}/shared/constant"
+	"{{.GoModName}}/shared/message"
+	"{{.GoModName}}/shared/pagination"
+	"{{.GoModName}}/shared/response"
+	"{{.GoModName}}/shared/validate"
 	"fmt"
 	"time"
-
 	"github.com/gofiber/fiber/v2"
 )
 
