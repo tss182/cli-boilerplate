@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"bytes"
 	"fmt"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/text/cases"
@@ -8,7 +9,30 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"text/template"
 )
+
+type ValueTemplate struct {
+	GoModName          string
+	DomainPackage      string
+	DomainPackageLocal string
+	Domain             string
+	Folder             string
+}
+
+func TemplateParse(txt string, data interface{}) (string, error) {
+	tmpl, err := template.New("default").Parse(txt)
+	if err != nil {
+		return "", err
+	}
+	var parsedTemplate bytes.Buffer
+	err = tmpl.Execute(&parsedTemplate, data)
+	if err != nil {
+		return "", err
+	}
+
+	return parsedTemplate.String(), nil
+}
 
 func PathExists(path string) bool {
 	info, err := os.Stat(path)
@@ -34,12 +58,20 @@ func RenameFile(s string) string {
 	return strings.ToLower(str)
 }
 
-func RenamePackage(s string) string {
+func PackageName(s string, upperFirstWord bool, separator string) string {
+	reg, _ := regexp.Compile("[^a-zA-Z ]")
+	s = reg.ReplaceAllString(s, "")
 	t := cases.Title(language.English)
-	str := t.String(strings.TrimSpace(s))
-	reg, _ := regexp.Compile("[^a-zA-Z]")
-	str = reg.ReplaceAllString(s, "")
-	return str
+	arr := strings.Split(s, " ")
+	var arrNew []string
+	for i, v := range arr {
+		if i == 0 && !upperFirstWord {
+			continue
+		}
+		temp := t.String(strings.ToLower(strings.TrimSpace(v)))
+		arrNew = append(arrNew, temp)
+	}
+	return strings.Join(arrNew, separator)
 }
 
 func GetModuleName() string {

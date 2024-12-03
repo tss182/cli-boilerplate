@@ -56,6 +56,14 @@ You can specify the folder name, file name, and the content to write to the file
 			return
 		}
 
+		//Template value
+		var templateValue lib.ValueTemplate
+		templateValue.GoModName = goModName
+		templateValue.DomainPackage = lib.PackageName(domain, true, "")
+		templateValue.DomainPackageLocal = lib.PackageName(domain, false, "")
+		templateValue.Domain = lib.PackageName(domain, true, " ")
+		templateValue.Folder = strings.Replace(domainFolder, "\\", "/", -1)
+
 		// Create the folder
 		err := os.MkdirAll(domainFolder, os.ModePerm)
 		if err != nil {
@@ -102,7 +110,12 @@ You can specify the folder name, file name, and the content to write to the file
 		}(handlerFile)
 
 		// Write content to the file
-		_, err = handlerFile.WriteString("package " + lib.RenamePackage(domain))
+		handlerContent, err := lib.TemplateParse(lib.SampleHandler, templateValue)
+		if err != nil {
+			fmt.Printf("Error parsing template: %v\n", err)
+			return
+		}
+		_, err = handlerFile.WriteString(handlerContent)
 		if err != nil {
 			fmt.Printf("Error writing to file: %v\n", err)
 			return
@@ -123,7 +136,12 @@ You can specify the folder name, file name, and the content to write to the file
 		}(repoFile)
 
 		// Write content to the file
-		_, err = repoFile.WriteString("package repository")
+		repoContent, err := lib.TemplateParse(lib.SampleRepository, templateValue)
+		if err != nil {
+			fmt.Printf("Error parsing template: %v\n", err)
+			return
+		}
+		_, err = repoFile.WriteString(repoContent)
 		if err != nil {
 			fmt.Printf("Error writing to file: %v\n", err)
 			return
@@ -144,7 +162,12 @@ You can specify the folder name, file name, and the content to write to the file
 		}(entityFile)
 
 		// Write content to the file
-		_, err = entityFile.WriteString("package entity")
+		entityContent, err := lib.TemplateParse(lib.SampleEntity, templateValue)
+		if err != nil {
+			fmt.Printf("Error parsing template: %v\n", err)
+			return
+		}
+		_, err = entityFile.WriteString(entityContent)
 		if err != nil {
 			fmt.Printf("Error writing to file: %v\n", err)
 			return
@@ -165,7 +188,12 @@ You can specify the folder name, file name, and the content to write to the file
 		}(featFile)
 
 		// Write content to the file
-		_, err = featFile.WriteString("package feature")
+		featContent, err := lib.TemplateParse(lib.SampleFeature, templateValue)
+		if err != nil {
+			fmt.Printf("Error parsing template: %v\n", err)
+			return
+		}
+		_, err = featFile.WriteString(featContent)
 		if err != nil {
 			fmt.Printf("Error writing to file: %v\n", err)
 			return
