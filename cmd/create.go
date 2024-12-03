@@ -161,7 +161,7 @@ You can specify the folder name, file name, and the content to write to the file
 
 		//import config
 		inImport = false
-		newImport := fmt.Sprintf("\"%s/%s\"", templateValue.GoModName, templateValue.Folder)
+		newImport := fmt.Sprintf("\t\"%s/%s\"", templateValue.GoModName, templateValue.Folder)
 
 		//struct config
 		inStruct = false
@@ -169,7 +169,7 @@ You can specify the folder name, file name, and the content to write to the file
 
 		//value struct config
 		inValueStruct := false
-		newVariableStruct := fmt.Sprintf("\t\t%s : \t%s.New(cont.%s)", templateValue.DomainPackage, templateValue.DomainPackageLocal, templateValue.DomainPackage)
+		newVariableStruct := fmt.Sprintf("\t\t%s : \t%s.New(cont.%sFeature),", templateValue.DomainPackage, templateValue.DomainPackageLocal, templateValue.DomainPackage)
 
 		for scanner.Scan() {
 			line := scanner.Text()
