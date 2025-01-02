@@ -272,9 +272,9 @@ func (r *{{.DomainPackageLocal}}Feature) Get(ctx context.Context, dto *paginatio
 	if err != nil {
 		return res, err
 	}
-	for i, v := range res.{{.DomainPackage}} {
-		res.{{.DomainPackage}}[i].CreatedAt = v.CreatedAt.In(timezone)
-		res.{{.DomainPackage}}[i].ModifiedAt = shared.SetTimeZone(v.ModifiedAt, timezone)
+	for i, v := range res.Data {
+		res.Data[i].CreatedAt = v.CreatedAt.In(timezone)
+		res.Data[i].ModifiedAt = shared.SetTimeZone(v.ModifiedAt, timezone)
 	}
 	return res, nil
 }
