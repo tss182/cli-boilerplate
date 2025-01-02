@@ -493,7 +493,7 @@ func (h *{{.DomainPackageLocal}}Handler) Update(c *fiber.Ctx) error {
 // @Tags Master {{.Domain}}
 // @Accept json
 // @Produce json
-// @Param payload body entity.{{.DomainPackageName}}CodeModel true  "Payload (code)"
+// @Param payload body entity.{{.DomainPackage}}CodeModel true  "Payload (code)"
 // @Success 200 {object} response.Response
 // @Failure 400,404,500 {object} response.Response
 // @Router /master/data [delete]
