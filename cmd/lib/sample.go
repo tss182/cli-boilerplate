@@ -105,19 +105,17 @@ func New(dbMySQL *database.Database, cfg *config.Config) {{.DomainPackage}}Repos
 }
 
 func (r *{{.DomainPackageLocal}}Repository) Get(ctx context.Context, dto *pagination.Request) (res entity.{{.DomainPackage}}Response, e error) {
-	tz := ctx.Value(constant.CTX_TIMEZONE).(string)
-
 	var data []entity.{{.DomainPackage}}Model
 	var fields = []string{"code", "name"}
 
 	sb := sqlbuilder.NewSelectBuilder()
-	sql := sb.Select(
+	query := sb.Select(
 		"IFNULL(code, '') AS code",
 		"IFNULL(name, '') AS name",
-		shared.SQLConvertTZ("", "created_at", tz),
-		"IFNULL(created_by, '') AS created_by",
-		shared.SQLConvertTZ("", "modified_at", tz),
-		"IFNULL(modified_by, '') AS modified_by",
+		created_at,
+		shared.SQLSelectFullName(tableName+".created_by", "created_by"),
+		modified_at,
+		shared.SQLSelectFullName(tableName+".modified_by", "modified_by"),
 	).
 		From(tableName).
 		Where(sb.IsNull("deleted_at")).
@@ -131,41 +129,39 @@ func (r *{{.DomainPackageLocal}}Repository) Get(ctx context.Context, dto *pagina
 		sql = sql.Where(sb.Or(orConditions...))
 	}
 
-	query, pMeta, err := pagination.New(sql, r.config, dto)
+	queryPage, pMeta, err := pagination.New(query, r.config, dto)
 	if err != nil {
 		e = err
 		return
 	}
 
-	err = r.db.DB.SelectContext(ctx, &data, query.Raw, query.Args...)
+	err = r.db.DB.SelectContext(ctx, &data, queryPage.Raw, queryPage.Args...)
 	if err != nil {
 		e = err
 		return
 	}
 
-	err = r.db.DB.GetContext(ctx, &pMeta.TotalRows, query.Count, query.Args...)
+	err = r.db.DB.GetContext(ctx, &pMeta.TotalRows, queryPage.Count, queryPage.Args...)
 	if err != nil {
 		e = err
 		return
 	}
 
-	query.SetTotal(pMeta.TotalRows, pMeta.Limit, &pMeta.TotalPages)
+	queryPage.SetTotal(pMeta.TotalRows, pMeta.Limit, &pMeta.TotalPages)
 	res.Data = data
 	res.PaginationMeta = pMeta
 	return
 }
 
 func (r *{{.DomainPackageLocal}}Repository) GetByID(ctx context.Context, code *string) (res entity.{{.DomainPackage}}Model, e error) {
-	tz := ctx.Value(constant.CTX_TIMEZONE).(string)
-
 	sb := sqlbuilder.NewSelectBuilder()
-	sql, args := sb.Select(
+	query, args := sb.Select(
 		"IFNULL(code, '') AS code",
 		"IFNULL(name, '') AS name",
-		shared.SQLConvertTZ("", "created_at", tz),
-		"IFNULL(created_by, '') AS created_by",
-		shared.SQLConvertTZ("", "modified_at", tz),
-		"IFNULL(modified_by, '') AS modified_by",
+		created_at,
+		shared.SQLSelectFullName(tableName+".created_by", "created_by"),
+		modified_at,
+		shared.SQLSelectFullName(tableName+".modified_by", "modified_by"),
 	).
 		From(tableName).
 		Where(
@@ -175,7 +171,7 @@ func (r *{{.DomainPackageLocal}}Repository) GetByID(ctx context.Context, code *s
 		OrderBy("created_at DESC").
 		Build()
 
-	err := r.db.DB.GetContext(ctx, &res, sql, args...)
+	err := r.db.DB.GetContext(ctx, &res, query, args...)
 	if err != nil {
 		e = err
 		return
@@ -186,12 +182,12 @@ func (r *{{.DomainPackageLocal}}Repository) GetByID(ctx context.Context, code *s
 
 func (r *{{.DomainPackageLocal}}Repository) Create(ctx context.Context, dto *entity.{{.DomainPackage}}Model) error {
 	ib := sqlbuilder.NewInsertBuilder()
-	sql, args := ib.InsertInto(tableName).
+	query, args := ib.InsertInto(tableName).
 		Cols("code", "name", "created_by", "created_at").
 		Values(dto.Code, dto.Name, dto.CreatedBy, dto.CreatedAt).
 		Build()
 
-	_, err := r.db.DB.ExecContext(ctx, sql, args...)
+	_, err := r.db.DB.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -201,7 +197,7 @@ func (r *{{.DomainPackageLocal}}Repository) Create(ctx context.Context, dto *ent
 
 func (r *{{.DomainPackageLocal}}Repository) Update(ctx context.Context, dto *entity.{{.DomainPackage}}Model) error {
 	ub := sqlbuilder.NewUpdateBuilder()
-	sql, args := ub.Update(tableName).
+	query, args := ub.Update(tableName).
 		Set(
 			ub.Assign("name", dto.Name),
 			ub.Assign("modified_by", dto.ModifiedBy),
@@ -213,7 +209,7 @@ func (r *{{.DomainPackageLocal}}Repository) Update(ctx context.Context, dto *ent
 		).
 		Build()
 
-	_, err := r.db.DB.ExecContext(ctx, sql, args...)
+	_, err := r.db.DB.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -223,7 +219,7 @@ func (r *{{.DomainPackageLocal}}Repository) Update(ctx context.Context, dto *ent
 
 func (r *{{.DomainPackageLocal}}Repository) Delete(ctx context.Context, code *string, userLog string) error {
 	ub := sqlbuilder.NewUpdateBuilder()
-	sql, args := ub.Update(tableName).
+	query, args := ub.Update(tableName).
 		Set(
 			ub.Assign("deleted_at", time.Now().UTC()),
 			ub.Assign("deleted_by", userLog),
@@ -234,7 +230,7 @@ func (r *{{.DomainPackageLocal}}Repository) Delete(ctx context.Context, code *st
 		).
 		Build()
 
-	_, err := r.db.DB.ExecContext(ctx, sql, args...)
+	_, err := r.db.DB.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
 	}
@@ -270,11 +266,29 @@ func New(repo entity.{{.DomainPackage}}RepositoryInterface) {{.DomainPackage}}Fe
 }
 
 func (r *{{.DomainPackageLocal}}Feature) Get(ctx context.Context, dto *pagination.Request) (entity.{{.DomainPackage}}Response, error) {
-	return r.repo.Get(ctx, dto)
+	tz := ctx.Value(constant.CTX_TIMEZONE).(string)
+	timezone := shared.GetTimeZone(tz)
+	res, err := r.repo.Get(ctx, dto)
+	if err != nil {
+		return res, err
+	}
+	for i, v := range res.{{.DomainPackage}} {
+		res.{{.DomainPackage}}[i].CreatedAt = v.CreatedAt.In(timezone)
+		res.{{.DomainPackage}}[i].ModifiedAt = shared.SetTimeZone(v.ModifiedAt, timezone)
+	}
+	return res, nil
 }
 
 func (r *{{.DomainPackageLocal}}Feature) GetByID(ctx context.Context, code *string) (entity.{{.DomainPackage}}Model, error) {
-	return r.repo.GetByID(ctx, code)
+	tz := ctx.Value(constant.CTX_TIMEZONE).(string)
+	timezone := shared.GetTimeZone(tz)
+	res, err := r.repo.GetByID(ctx, code)
+	if err != nil {
+		return res, err
+	}
+	res.CreatedAt = res.CreatedAt.In(timezone)
+	res.ModifiedAt = shared.SetTimeZone(res.ModifiedAt, timezone)
+	return res, nil
 }
 
 func (r *{{.DomainPackageLocal}}Feature) Create(ctx context.Context, dto *entity.{{.DomainPackage}}Model) error {
@@ -479,7 +493,7 @@ func (h *{{.DomainPackageLocal}}Handler) Update(c *fiber.Ctx) error {
 // @Tags Master {{.Domain}}
 // @Accept json
 // @Produce json
-// @Param payload body entity.{DomainPackageName}CodeModel true  "Payload (code)"
+// @Param payload body entity.{{.DomainPackageName}}CodeModel true  "Payload (code)"
 // @Success 200 {object} response.Response
 // @Failure 400,404,500 {object} response.Response
 // @Router /master/data [delete]
