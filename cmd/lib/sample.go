@@ -16,19 +16,19 @@ type (
 	// Interface method repository
 	{{.DomainPackage}}RepositoryInterface interface {
 		Get(ctx context.Context, dto *pagination.Request) ({{.DomainPackage}}Response, error)
-		GetByID(ctx context.Context, code *string) ({{.DomainPackage}}Model, error)
+		GetByID(ctx context.Context, id *string) ({{.DomainPackage}}Model, error)
 		Create(ctx context.Context, dto *{{.DomainPackage}}Model) error
 		Update(ctx context.Context, dto *{{.DomainPackage}}Model) error
-		Delete(ctx context.Context, code *string, userLog string) error
+		Delete(ctx context.Context, id *string, userLog string) error
 	}
 
 	// Interface method feature
 	{{.DomainPackage}}FeatureInterface interface {
 		Get(ctx context.Context, dto *pagination.Request) ({{.DomainPackage}}Response, error)
-		GetByID(ctx context.Context, code *string) ({{.DomainPackage}}Model, error)
+		GetByID(ctx context.Context, id *string) ({{.DomainPackage}}Model, error)
 		Create(ctx context.Context, dto *{{.DomainPackage}}Model) error
 		Update(ctx context.Context, dto *{{.DomainPackage}}Model) error
-		Delete(ctx context.Context, code *string, userLog string) error
+		Delete(ctx context.Context, id *string, userLog string) error
 	}
 
 	// Interface method handler
@@ -42,7 +42,7 @@ type (
 
 	// Model
 	{{.DomainPackage}}CodeModel struct {
-		Code string ` + "`" + `db:"code" json:"code"` + "`" + `
+		ID string ` + "`" + `db:"id" json:"id"` + "`" + `
 	}
 
 
@@ -106,27 +106,27 @@ func New(dbMySQL *database.Database, cfg *config.Config) {{.DomainPackage}}Repos
 
 func (r *{{.DomainPackageLocal}}Repository) Get(ctx context.Context, dto *pagination.Request) (res entity.{{.DomainPackage}}Response, e error) {
 	var data []entity.{{.DomainPackage}}Model
-	var fields = []string{"code", "name"}
+	var fields = []string{"id", "name"}
 
 	sb := sqlbuilder.NewSelectBuilder()
 	query := sb.Select(
-		"IFNULL(code, '') AS code",
+		"IFNULL(id, '') AS id",
 		"IFNULL(name, '') AS name",
-		created_at,
+		"created_at",
 		shared.SQLSelectFullName(tableName+".created_by", "created_by"),
-		modified_at,
+		"modified_at",
 		shared.SQLSelectFullName(tableName+".modified_by", "modified_by"),
 	).
 		From(tableName).
 		Where(sb.IsNull("deleted_at")).
-		OrderBy("code ASC")
+		OrderBy("id ASC")
 
 	if dto.Search != "" {
 		var orConditions []string
 		for _, field := range fields {
 			orConditions = append(orConditions, sb.Like(field, "%"+dto.Search+"%"))
 		}
-		sql = sql.Where(sb.Or(orConditions...))
+		 query.Where(sb.Or(orConditions...))
 	}
 
 	queryPage, pMeta, err := pagination.New(query, r.config, dto)
@@ -153,19 +153,19 @@ func (r *{{.DomainPackageLocal}}Repository) Get(ctx context.Context, dto *pagina
 	return
 }
 
-func (r *{{.DomainPackageLocal}}Repository) GetByID(ctx context.Context, code *string) (res entity.{{.DomainPackage}}Model, e error) {
+func (r *{{.DomainPackageLocal}}Repository) GetByID(ctx context.Context, id *string) (res entity.{{.DomainPackage}}Model, e error) {
 	sb := sqlbuilder.NewSelectBuilder()
 	query, args := sb.Select(
-		"IFNULL(code, '') AS code",
+		"IFNULL(id, '') AS id",
 		"IFNULL(name, '') AS name",
-		created_at,
+		"created_at",
 		shared.SQLSelectFullName(tableName+".created_by", "created_by"),
-		modified_at,
+		"modified_at",
 		shared.SQLSelectFullName(tableName+".modified_by", "modified_by"),
 	).
 		From(tableName).
 		Where(
-			sb.Equal("code", code),
+			sb.Equal("id", id),
 			sb.IsNull("deleted_at"),
 		).
 		OrderBy("created_at DESC").
@@ -183,8 +183,8 @@ func (r *{{.DomainPackageLocal}}Repository) GetByID(ctx context.Context, code *s
 func (r *{{.DomainPackageLocal}}Repository) Create(ctx context.Context, dto *entity.{{.DomainPackage}}Model) error {
 	ib := sqlbuilder.NewInsertBuilder()
 	query, args := ib.InsertInto(tableName).
-		Cols("code", "name", "created_by", "created_at").
-		Values(dto.Code, dto.Name, dto.CreatedBy, dto.CreatedAt).
+		Cols("id", "name", "created_by", "created_at").
+		Values(dto.ID, dto.Name, dto.CreatedBy, dto.CreatedAt).
 		Build()
 
 	_, err := r.db.DB.ExecContext(ctx, query, args...)
@@ -204,7 +204,7 @@ func (r *{{.DomainPackageLocal}}Repository) Update(ctx context.Context, dto *ent
 			ub.Assign("modified_at", dto.ModifiedAt),
 		).
 		Where(
-			ub.Equal("code", dto.Code),
+			ub.Equal("id", dto.ID),
 			ub.IsNull("deleted_at"),
 		).
 		Build()
@@ -217,7 +217,7 @@ func (r *{{.DomainPackageLocal}}Repository) Update(ctx context.Context, dto *ent
 	return nil
 }
 
-func (r *{{.DomainPackageLocal}}Repository) Delete(ctx context.Context, code *string, userLog string) error {
+func (r *{{.DomainPackageLocal}}Repository) Delete(ctx context.Context, id *string, userLog string) error {
 	ub := sqlbuilder.NewUpdateBuilder()
 	query, args := ub.Update(tableName).
 		Set(
@@ -225,7 +225,7 @@ func (r *{{.DomainPackageLocal}}Repository) Delete(ctx context.Context, code *st
 			ub.Assign("deleted_by", userLog),
 		).
 		Where(
-			ub.Equal("code", code),
+			ub.Equal("id", id),
 			ub.IsNull("deleted_at"),
 		).
 		Build()
@@ -279,10 +279,10 @@ func (r *{{.DomainPackageLocal}}Feature) Get(ctx context.Context, dto *paginatio
 	return res, nil
 }
 
-func (r *{{.DomainPackageLocal}}Feature) GetByID(ctx context.Context, code *string) (entity.{{.DomainPackage}}Model, error) {
+func (r *{{.DomainPackageLocal}}Feature) GetByID(ctx context.Context, id *string) (entity.{{.DomainPackage}}Model, error) {
 	tz := ctx.Value(constant.CTX_TIMEZONE).(string)
 	timezone := shared.GetTimeZone(tz)
-	res, err := r.repo.GetByID(ctx, code)
+	res, err := r.repo.GetByID(ctx, id)
 	if err != nil {
 		return res, err
 	}
@@ -292,23 +292,23 @@ func (r *{{.DomainPackageLocal}}Feature) GetByID(ctx context.Context, code *stri
 }
 
 func (r *{{.DomainPackageLocal}}Feature) Create(ctx context.Context, dto *entity.{{.DomainPackage}}Model) error {
-	data, err := r.GetByID(ctx, &dto.Code)
+	data, err := r.GetByID(ctx, &dto.ID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
 	}
 
-	if data.Code != "" {
-		return fmt.Errorf("400:Product %s already exists", dto.Code)
+	if data.ID != "" {
+		return fmt.Errorf("400:Product %s already exists", dto.ID)
 	}
 
 	return r.repo.Create(ctx, dto)
 }
 
 func (r *{{.DomainPackageLocal}}Feature) Update(ctx context.Context, dto *entity.{{.DomainPackage}}Model) error {
-	_, err := r.GetByID(ctx, &dto.Code)
+	_, err := r.GetByID(ctx, &dto.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("404:Data %s not found", dto.Code)
+			return fmt.Errorf("404:Data %s not found", dto.ID)
 		} else {
 			return err
 		}
@@ -317,17 +317,17 @@ func (r *{{.DomainPackageLocal}}Feature) Update(ctx context.Context, dto *entity
 	return r.repo.Update(ctx, dto)
 }
 
-func (r *{{.DomainPackageLocal}}Feature) Delete(ctx context.Context, code *string, userLog string) error {
-	_, err := r.GetByID(ctx, code)
+func (r *{{.DomainPackageLocal}}Feature) Delete(ctx context.Context, id *string, userLog string) error {
+	_, err := r.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("404:Data %s not found", *code)
+			return fmt.Errorf("404:Data %s not found", *id)
 		} else {
 			return err
 		}
 	}
 
-	return r.repo.Delete(ctx, code, userLog)
+	return r.repo.Delete(ctx, id, userLog)
 }
 `
 
@@ -395,17 +395,17 @@ func (h *{{.DomainPackageLocal}}Handler) Get(c *fiber.Ctx) error {
 
 // GetByID godoc
 // @Summary {{.Domain}} Data
-// @Description Get {{.Domain}} data by code
+// @Description Get {{.Domain}} data by id
 // @Tags Master {{.Domain}}
 // @Accept json
 // @Produce json
-// @Param   code	path    string     true  "Code"
+// @Param   id	path    string     true  "ID"
 // @Success 200 {object} entity.{{.DomainPackage}}Model
 // @Failure 400,404,500 {object} response.Response
-// @Router /master/data/{code} [get]
+// @Router /master/data/{id} [get]
 func (h *{{.DomainPackageLocal}}Handler) GetByID(c *fiber.Ctx) error {
 	dto := entity.{{.DomainPackage}}CodeModel{
-		Code: c.Params("code"),
+		ID: c.Params("id"),
 	}
 
 	errs := validate.ValidateStruct(dto)
@@ -416,7 +416,7 @@ func (h *{{.DomainPackageLocal}}Handler) GetByID(c *fiber.Ctx) error {
 	ctx, cancel := shared.CreateContextWithTimeoutAndValue(c)
 	defer cancel()
 
-	res, err := h.feat.GetByID(ctx, &dto.Code)
+	res, err := h.feat.GetByID(ctx, &dto.ID)
 	shared.Exception(err, entity.Name)
 
 	return response.OK(c, fmt.Sprintf(message.MSG_DATA, entity.Name), res)
@@ -493,7 +493,7 @@ func (h *{{.DomainPackageLocal}}Handler) Update(c *fiber.Ctx) error {
 // @Tags Master {{.Domain}}
 // @Accept json
 // @Produce json
-// @Param payload body entity.{{.DomainPackage}}CodeModel true  "Payload (code)"
+// @Param payload body entity.{{.DomainPackage}}CodeModel true  "Payload (id)"
 // @Success 200 {object} response.Response
 // @Failure 400,404,500 {object} response.Response
 // @Router /master/data [delete]
@@ -511,7 +511,7 @@ func (h *{{.DomainPackageLocal}}Handler) Delete(c *fiber.Ctx) error {
 	defer cancel()
 
 	userLog := c.Locals(constant.REQ_USERNAME).(string)
-	err = h.feat.Delete(ctx, &dto.Code, userLog)
+	err = h.feat.Delete(ctx, &dto.ID, userLog)
 	shared.Exception(err, entity.Name)
 
 	return response.OK(c, fmt.Sprintf(message.MSG_DELETED, entity.Name), nil)
