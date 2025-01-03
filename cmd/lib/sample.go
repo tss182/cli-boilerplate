@@ -16,19 +16,19 @@ type (
 	// Interface method repository
 	{{.DomainPackage}}RepositoryInterface interface {
 		Get(ctx context.Context, dto *pagination.Request) ({{.DomainPackage}}Response, error)
-		GetByID(ctx context.Context, id *string) ({{.DomainPackage}}Model, error)
+		GetByID(ctx context.Context, id *int) ({{.DomainPackage}}Model, error)
 		Create(ctx context.Context, dto *{{.DomainPackage}}Model) error
 		Update(ctx context.Context, dto *{{.DomainPackage}}Model) error
-		Delete(ctx context.Context, id *string, userLog string) error
+		Delete(ctx context.Context, id *int, userLog string) error
 	}
 
 	// Interface method feature
 	{{.DomainPackage}}FeatureInterface interface {
 		Get(ctx context.Context, dto *pagination.Request) ({{.DomainPackage}}Response, error)
-		GetByID(ctx context.Context, id *string) ({{.DomainPackage}}Model, error)
+		GetByID(ctx context.Context, id *int) ({{.DomainPackage}}Model, error)
 		Create(ctx context.Context, dto *{{.DomainPackage}}Model) error
 		Update(ctx context.Context, dto *{{.DomainPackage}}Model) error
-		Delete(ctx context.Context, id *string, userLog string) error
+		Delete(ctx context.Context, id *int, userLog string) error
 	}
 
 	// Interface method handler
@@ -42,7 +42,7 @@ type (
 
 	// Model
 	{{.DomainPackage}}CodeModel struct {
-		ID string ` + "`" + `db:"id" json:"id"` + "`" + `
+		ID int ` + "`" + `db:"id" json:"id"` + "`" + `
 	}
 
 
@@ -153,7 +153,7 @@ func (r *{{.DomainPackageLocal}}Repository) Get(ctx context.Context, dto *pagina
 	return
 }
 
-func (r *{{.DomainPackageLocal}}Repository) GetByID(ctx context.Context, id *string) (res entity.{{.DomainPackage}}Model, e error) {
+func (r *{{.DomainPackageLocal}}Repository) GetByID(ctx context.Context, id *int) (res entity.{{.DomainPackage}}Model, e error) {
 	sb := sqlbuilder.NewSelectBuilder()
 	query, args := sb.Select(
 		"IFNULL(id, '') AS id",
@@ -217,7 +217,7 @@ func (r *{{.DomainPackageLocal}}Repository) Update(ctx context.Context, dto *ent
 	return nil
 }
 
-func (r *{{.DomainPackageLocal}}Repository) Delete(ctx context.Context, id *string, userLog string) error {
+func (r *{{.DomainPackageLocal}}Repository) Delete(ctx context.Context, id *int, userLog string) error {
 	ub := sqlbuilder.NewUpdateBuilder()
 	query, args := ub.Update(tableName).
 		Set(
@@ -279,7 +279,7 @@ func (r *{{.DomainPackageLocal}}Feature) Get(ctx context.Context, dto *paginatio
 	return res, nil
 }
 
-func (r *{{.DomainPackageLocal}}Feature) GetByID(ctx context.Context, id *string) (entity.{{.DomainPackage}}Model, error) {
+func (r *{{.DomainPackageLocal}}Feature) GetByID(ctx context.Context, id *int) (entity.{{.DomainPackage}}Model, error) {
 	tz := ctx.Value(constant.CTX_TIMEZONE).(string)
 	timezone := shared.GetTimeZone(tz)
 	res, err := r.repo.GetByID(ctx, id)
@@ -317,7 +317,7 @@ func (r *{{.DomainPackageLocal}}Feature) Update(ctx context.Context, dto *entity
 	return r.repo.Update(ctx, dto)
 }
 
-func (r *{{.DomainPackageLocal}}Feature) Delete(ctx context.Context, id *string, userLog string) error {
+func (r *{{.DomainPackageLocal}}Feature) Delete(ctx context.Context, id *int, userLog string) error {
 	_, err := r.GetByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -404,8 +404,9 @@ func (h *{{.DomainPackageLocal}}Handler) Get(c *fiber.Ctx) error {
 // @Failure 400,404,500 {object} response.Response
 // @Router /master/data/{id} [get]
 func (h *{{.DomainPackageLocal}}Handler) GetByID(c *fiber.Ctx) error {
+	id, _ := c.ParamsInt("id")
 	dto := entity.{{.DomainPackage}}CodeModel{
-		ID: c.Params("id"),
+		ID: id,
 	}
 
 	errs := validate.ValidateStruct(dto)
@@ -501,11 +502,6 @@ func (h *{{.DomainPackageLocal}}Handler) Delete(c *fiber.Ctx) error {
 	var dto entity.{{.DomainPackage}}Model
 	err := c.BodyParser(&dto)
 	shared.Exception(err, fmt.Sprintf(message.MSG_PAYLOAD, entity.Name))
-
-	errs := validate.ValidateStruct(dto)
-	if len(errs) > 0 {
-		return response.BadRequest(c, message.DATA_VALIDATION, errs)
-	}
 
 	ctx, cancel := shared.CreateContextWithTimeoutAndValue(c)
 	defer cancel()
